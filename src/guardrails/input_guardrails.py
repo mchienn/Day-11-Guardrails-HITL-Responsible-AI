@@ -39,7 +39,7 @@ def detect_injection(user_input: str) -> bool:
     """
     INJECTION_PATTERNS = [
         r"ignore\s+(all\s+)?(previous|above)\s+instructions",
-        r"you\s+are\s+now\s+",
+        r"you\s+are\s+now",
         r"(reveal|show|output|print|display)\s+(your\s+)?(system\s+)?(prompt|instructions|configuration)",
         r"pretend\s+(you\s+are|to\s+be)\s+",
         r"(forget|disregard|override)\s+(all\s+)?(prior|previous|your)\s+(directives|instructions|rules)",

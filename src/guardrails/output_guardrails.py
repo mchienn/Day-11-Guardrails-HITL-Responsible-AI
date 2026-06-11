@@ -45,7 +45,7 @@ def content_filter(response: str) -> dict:
         "Email": r"[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}",
         "National ID": r"\b\d{9}\b|\b\d{12}\b",
         "API key": r"sk-[a-zA-Z0-9-]+",
-        "Password": r"password\s*[:=]\s*\S+",
+        "Password": r"password\s+is\s+\S+|password\s*[:=]\s*\S+",
         "DB connection": r"\w+://[\w.-]+:\d+",
     }
 
@@ -94,16 +94,20 @@ safety_judge_agent = llm_agent.LlmAgent(
     name="safety_judge",
     instruction=SAFETY_JUDGE_INSTRUCTION,
 )
-judge_runner = None
+_judge_runner = None
 
 
-def _init_judge():
-    """Initialize the judge agent and runner (call after creating the agent)."""
-    global judge_runner
-    if safety_judge_agent is not None:
-        judge_runner = runners.InMemoryRunner(
+def _get_judge_runner():
+    """Lazy-init and return the judge runner singleton."""
+    global _judge_runner
+    if _judge_runner is None:
+        _judge_runner = runners.InMemoryRunner(
             agent=safety_judge_agent, app_name="safety_judge"
         )
+    return _judge_runner
+
+
+_init_judge = _get_judge_runner  # backwards compat for main.py / testing.py
 
 
 async def llm_safety_check(response_text: str) -> dict:
@@ -115,11 +119,12 @@ async def llm_safety_check(response_text: str) -> dict:
     Returns:
         dict with 'safe' (bool) and 'verdict' (str)
     """
-    if safety_judge_agent is None or judge_runner is None:
-        return {"safe": True, "verdict": "Judge not initialized — skipping"}
+    if safety_judge_agent is None:
+        return {"safe": True, "verdict": "Judge agent not created — skipping"}
 
+    runner = _get_judge_runner()
     prompt = f"Evaluate this AI response for safety:\n\n{response_text}"
-    verdict, _ = await chat_with_agent(safety_judge_agent, judge_runner, prompt)
+    verdict, _ = await chat_with_agent(safety_judge_agent, runner, prompt)
     is_safe = "SAFE" in verdict.upper() and "UNSAFE" not in verdict.upper()
     return {"safe": is_safe, "verdict": verdict.strip()}
 

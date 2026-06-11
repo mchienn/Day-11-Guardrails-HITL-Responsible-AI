@@ -44,6 +44,7 @@ async def run_comparison():
     print("\n" + "=" * 60)
     print("PHASE 2: Protected Agent")
     print("=" * 60)
+    _init_judge()
     input_plugin = InputGuardrailPlugin()
     output_plugin = OutputGuardrailPlugin(use_llm_judge=False)
     protected_agent, protected_runner = create_protected_agent(
